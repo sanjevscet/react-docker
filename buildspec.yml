@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 22 # Specify the Node.js version your project uses
+      nodejs: 14
     commands:
       - echo Installing dependencies...
       - npm install
@@ -18,7 +18,7 @@ phases:
     commands:
       - echo Build completed on `date`
       - echo Logging in to Amazon ECR...
-      - $(aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com)
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       - echo Building the Docker image...
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - echo Tagging the Docker image...
@@ -34,4 +34,4 @@ artifacts:
 
 env:
   variables:
-    IMAGE_TAG: "latest" # Default value, can be overridden by environment variables
+    IMAGE_TAG: "latest"
