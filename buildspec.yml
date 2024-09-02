@@ -2,39 +2,36 @@ version: 0.2
 
 phases:
   install:
+    runtime-versions:
+      nodejs: 22 # Specify the Node.js version your project uses
     commands:
-      - echo Installing Docker...
-      - yum update -y
-      - yum install -y docker
-      - echo Starting Docker daemon...
-      - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 &
-      - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
-      - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-  pre_build:
-    commands:
-      - echo Tagging the Docker image...
-      - IMAGE_TAG=latest
-      - REPOSITORY_NAME=my-react-app
-      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPOSITORY_NAME
-      - docker tag $REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+      - echo Installing dependencies...
+      - npm install
 
   build:
     commands:
-      - echo Building the Docker image...
-      - docker build -t $REPOSITORY_NAME:$IMAGE_TAG .
+      - echo Build started on `date`
+      - echo Building the React application...
+      - npm run build
 
   post_build:
     commands:
-      - echo Pushing the Docker image to Amazon ECR...
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Build completed on `date`
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com)
+      - echo Building the Docker image...
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - echo Tagging the Docker image...
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - echo Pushing the Docker image to ECR...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
 
 artifacts:
   files:
     - "**/*"
+  base-directory: build
   discard-paths: yes
 
-cache:
-  paths:
-    - "/root/.npm/**/*"
+env:
+  variables:
+    IMAGE_TAG: "latest" # Default value, can be overridden by environment variables
